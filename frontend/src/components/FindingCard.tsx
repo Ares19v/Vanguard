@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, ChevronRight, ExternalLink, Bot, Wrench } from 'lucide-react'
+import { ChevronRight, ExternalLink, Bot, Wrench } from 'lucide-react'
 import type { Finding } from '../store/useVanguardStore'
 import SeverityBadge from './SeverityBadge'
 import { useVanguardStore } from '../store/useVanguardStore'

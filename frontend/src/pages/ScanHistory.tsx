@@ -16,7 +16,7 @@ export default function ScanHistory() {
   const { scanHistory } = useVanguardStore()
   const { fetchHistory, fetchScanById } = useScan()
   const [selected, setSelected] = useState<ScanSummary | null>(null)
-  const [detail, setDetail]     = useState<any>(null)
+  const [, setDetail]     = useState<any>(null)
 
   useEffect(() => { fetchHistory() }, [fetchHistory])
 

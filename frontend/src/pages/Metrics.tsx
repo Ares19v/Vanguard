@@ -50,7 +50,7 @@ function MetricChart({
             tickFormatter={v => `${v}${displayUnit}`} width={50} />
           <Tooltip
             contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8 }}
-            formatter={(v: number) => [`${v}${displayUnit}`, label]}
+            formatter={(v: any) => [`${v}${displayUnit}`, label]}
           />
           {refLine && <ReferenceLine y={refLine} stroke="#f97316" strokeDasharray="4 4" />}
           <Line type="monotone" dataKey="v" stroke={color} strokeWidth={2} dot={false} />

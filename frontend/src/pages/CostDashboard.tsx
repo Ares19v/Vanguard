@@ -121,7 +121,7 @@ export default function CostDashboard() {
                     contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8 }}
                     labelStyle={{ color: '#94a3b8', fontSize: 11 }}
                     itemStyle={{ color: '#10b981' }}
-                    formatter={(v: number) => [`$${v.toFixed(2)}`, 'Spend']}
+                    formatter={(v: any) => [`$${Number(v).toFixed(2)}`, 'Spend']}
                   />
                   <Area type="monotone" dataKey="amount" stroke="#10b981" fill="url(#costGrad)" strokeWidth={2} />
                 </AreaChart>
@@ -139,7 +139,7 @@ export default function CostDashboard() {
                     tickFormatter={s => s.replace('Amazon ', '').replace('AWS ', '')} />
                   <Tooltip
                     contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8 }}
-                    formatter={(v: number) => [`$${v.toFixed(2)}`, 'MTD']}
+                    formatter={(v: any) => [`$${Number(v).toFixed(2)}`, 'MTD']}
                   />
                   <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
                     {c.by_service.slice(0, 8).map((_, i) => (

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Wifi, WifiOff, Activity, Globe } from 'lucide-react'
 import {
@@ -8,9 +8,7 @@ import {
 import { useVanguardStore } from '../store/useVanguardStore'
 import SeverityBadge from '../components/SeverityBadge'
 
-const SEV_COLOR: Record<string, string> = {
-  CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#f59e0b', LOW: '#3b82f6', INFO: '#6b7280'
-}
+
 
 const EVENT_ICONS: Record<string, string> = {
   PORT_SCAN:        '🔍',
@@ -38,8 +36,7 @@ export default function ThreatFeed() {
     count,
   }))
 
-  // Events per minute estimate
-  const eventsPerMin = Math.round(threatEventCount / Math.max(1, threatEvents.length / 60))
+
 
   const criticalCount = threatEvents.filter(e => e.severity === 'CRITICAL').length
   const highCount     = threatEvents.filter(e => e.severity === 'HIGH').length

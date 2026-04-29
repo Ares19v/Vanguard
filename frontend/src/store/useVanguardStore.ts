@@ -409,7 +409,7 @@ interface VanguardState {
 
 export const useVanguardStore = create<VanguardState>()(
   devtools(
-    (set, get) => ({
+    (set) => ({
       // ── Initial state ─────────────────────────────────────────────────
       findings: [],
       scanStatus: 'idle',

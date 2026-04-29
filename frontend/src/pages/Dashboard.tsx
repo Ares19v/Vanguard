@@ -1,11 +1,11 @@
-import { useEffect } from 'react'
+
 import { motion } from 'framer-motion'
 import {
   ShieldCheck, AlertTriangle, Activity, Terminal,
-  TrendingUp, Clock, Layers
+  TrendingUp, Layers
 } from 'lucide-react'
 import {
-  RadialBarChart, RadialBar, ResponsiveContainer,
+  ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid
 } from 'recharts'
 import { useVanguardStore } from '../store/useVanguardStore'

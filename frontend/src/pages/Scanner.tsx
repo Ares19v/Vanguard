@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Terminal, Play, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react'
+import { Terminal, Play, Download } from 'lucide-react'
 import { useVanguardStore } from '../store/useVanguardStore'
 import { useScan } from '../hooks/useScan'
 import SeverityBadge from '../components/SeverityBadge'

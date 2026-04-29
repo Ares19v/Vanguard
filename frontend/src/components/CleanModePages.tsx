@@ -56,7 +56,7 @@ export function CleanDashboard({
   const totalProblems = critical + high + medium + low
   const statusEmoji = score < 30 ? '🟢' : score < 60 ? '🟡' : '🔴'
   const statusText  = score < 30 ? 'Looking Good' : score < 60 ? 'Some Issues' : 'Needs Attention'
-  const statusColor = score < 30 ? 'emerald' : score < 60 ? 'yellow' : 'red'
+
 
   return (
     <div className="p-8 max-w-3xl mx-auto">

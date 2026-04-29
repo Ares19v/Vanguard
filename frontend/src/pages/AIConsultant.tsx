@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, Send, X, Sparkles, FileText } from 'lucide-react'
 import { useVanguardStore } from '../store/useVanguardStore'
