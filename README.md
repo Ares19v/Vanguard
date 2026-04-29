@@ -239,3 +239,5 @@ Vanguard/
 ## 📄 License
 
 MIT © 2025 [Devansh Tyagi](https://github.com/Ares19v)
+
+<!-- ci-trigger -->
