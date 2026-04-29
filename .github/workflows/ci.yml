@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend — Python 3.11 ──────────────────────────────────────────────────
+  backend:
+    name: Backend — Python 3.11
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install application dependencies
+        run: pip install --no-cache-dir -r requirements.txt
+
+      - name: Install test tools
+        run: pip install pytest pytest-asyncio httpx
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        env:
+          MOCK_MODE: "true"
+          DRY_RUN: "true"
+          GEMINI_API_KEY: "ci-placeholder-not-a-real-key"
+          JWT_SECRET: "ci-test-secret-must-be-long-enough-32chars"
+          DATABASE_URL: "sqlite:///./test_vanguard.db"
+          AWS_ACCESS_KEY_ID: "ci-placeholder"
+          AWS_SECRET_ACCESS_KEY: "ci-placeholder"
+          AWS_DEFAULT_REGION: "us-east-1"
+
+  # ── Frontend — Node 20 ────────────────────────────────────────────────────
+  frontend:
+    name: Frontend — Node 20
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Build production bundle
+        run: npm run build
