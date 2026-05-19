@@ -241,3 +241,8 @@ Vanguard/
 MIT © 2025 [Devansh Tyagi](https://github.com/Ares19v)
 
 <!-- ci-trigger -->
+
+---
+<p align="center">
+  Made by Devansh Tyagi @ 2026
+</p>
