@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Activity, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Activity, RefreshCw } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
   ResponsiveContainer, ReferenceLine
 } from 'recharts'
 import { useVanguardStore } from '../store/useVanguardStore'
-import type { ResourceMetrics } from '../store/useVanguardStore'
 import { CleanMetrics } from '../components/CleanModePages'
 
 const API = 'http://localhost:8000/api/v1'
 const STAGGER = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } }
-const ITEM = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.35 } } }
 
 const PERIODS = ['1h', '6h', '24h', '7d']
 
@@ -40,20 +38,25 @@ function MetricChart({
   }))
   const displayUnit = unit === 'Bytes' ? 'MB' : unit === 'Percent' ? '%' : unit
   return (
-    <div className="glass rounded-xl p-4">
-      <div className="text-xs font-mono text-muted mb-3">{label}</div>
+    <div className="glass-cloud-card p-4.5 rounded-2xl">
+      <div className="text-xs font-mono text-sky-300 font-semibold mb-3">{label}</div>
       <ResponsiveContainer width="100%" height={140}>
         <LineChart data={formatted}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-          <XAxis dataKey="t" tick={{ fill: '#64748b', fontSize: 9 }} interval="preserveStartEnd" />
-          <YAxis tick={{ fill: '#64748b', fontSize: 10 }}
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+          <XAxis dataKey="t" tick={{ fill: '#94a3b8', fontSize: 9 }} interval="preserveStartEnd" />
+          <YAxis tick={{ fill: '#94a3b8', fontSize: 9 }}
             tickFormatter={v => `${v}${displayUnit}`} width={50} />
           <Tooltip
-            contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8 }}
+            contentStyle={{
+              background: 'rgba(10, 25, 48, 0.95)',
+              borderColor: 'rgba(147, 197, 253, 0.3)',
+              borderRadius: '14px',
+              fontSize: '11px',
+            }}
             formatter={(v: any) => [`${v}${displayUnit}`, label]}
           />
           {refLine && <ReferenceLine y={refLine} stroke="#f97316" strokeDasharray="4 4" />}
-          <Line type="monotone" dataKey="v" stroke={color} strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="v" stroke={color} strokeWidth={2.5} dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -62,149 +65,120 @@ function MetricChart({
 
 export default function Metrics() {
   const { metricsMap, metricsLoading, setMetrics, setMetricsLoading, cleanMode } = useVanguardStore()
-  const [resourceId, setResourceId] = useState(RESOURCE_OPTIONS[0].id)
+  const [selectedRes, setSelectedRes] = useState(RESOURCE_OPTIONS[0])
   const [period, setPeriod] = useState('24h')
 
-  const fetchMetrics = async (id = resourceId, p = period) => {
+  const fetchMetrics = async (res = selectedRes, p = period) => {
     setMetricsLoading(true)
     try {
-      const r = await fetch(`${API}/metrics/${id}?period=${p}`)
-      const d: ResourceMetrics = await r.json()
-      setMetrics(id, d)
+      const r = await fetch(`${API}/metrics/${res.id}?resource_type=${res.type}&period=${p}`)
+      setMetrics(res.id, await r.json())
     } finally { setMetricsLoading(false) }
   }
 
-  useEffect(() => { fetchMetrics() }, [])
+  useEffect(() => { fetchMetrics(selectedRes, period) }, [selectedRes, period])
+  const m = metricsMap[selectedRes.id]
 
-  const current = metricsMap[resourceId]
-  const selectedOption = RESOURCE_OPTIONS.find(r => r.id === resourceId)!
-
-  if (cleanMode) return <CleanMetrics metricsMap={metricsMap as Record<string, { avg_cpu?: number; max_cpu?: number; is_idle: boolean; resource_type: string }>} />
-
-  const handleChange = (id: string) => {
-    setResourceId(id)
-    fetchMetrics(id, period)
-  }
-  const handlePeriod = (p: string) => {
-    setPeriod(p)
-    fetchMetrics(resourceId, p)
-  }
+  if (cleanMode) return <CleanMetrics metricsMap={metricsMap} />
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
-      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
         <div>
-          <h1 className="text-2xl font-bold text-bright flex items-center gap-2">
-            <Activity className="w-6 h-6 text-cyan-400" /> Resource Metrics
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-white flex items-center gap-2">
+            <Activity className="w-6 h-6 text-sky-400" />
+            <span>AWS CloudWatch Real-Time Metrics</span>
           </h1>
-          <p className="text-sm text-muted mt-1">CloudWatch performance data</p>
+          <p className="text-xs text-sky-200/70 mt-1">
+            Live utilization, network throughput, error rates, and resource saturation telemetry
+          </p>
         </div>
-        <button onClick={() => fetchMetrics()} disabled={metricsLoading}
-          className="btn-primary flex items-center gap-2 text-sm">
-          <RefreshCw className={`w-4 h-4 ${metricsLoading ? 'animate-spin' : ''}`} />
-          Refresh
+
+        <button
+          onClick={() => fetchMetrics()}
+          disabled={metricsLoading}
+          className="btn-pill-primary text-xs py-2 px-4 shadow-lg"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${metricsLoading ? 'animate-spin' : ''}`} />
+          <span>Refresh Telemetry</span>
         </button>
       </motion.div>
 
-      {/* Controls */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <select
-          value={resourceId}
-          onChange={e => handleChange(e.target.value)}
-          className="bg-panel border border-border text-bright text-sm rounded-lg px-3 py-2 focus:border-cyan-400 focus:outline-none"
-        >
-          {RESOURCE_OPTIONS.map(o => (
-            <option key={o.id} value={o.id}>{o.label}</option>
+      {/* ── Filter Controls ───────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 p-1 bg-white/5 border border-white/10 rounded-full">
+          {RESOURCE_OPTIONS.map(r => (
+            <button
+              key={r.id}
+              onClick={() => setSelectedRes(r)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                selectedRes.id === r.id
+                  ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30'
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              {r.label}
+            </button>
           ))}
-        </select>
-        <div className="flex gap-1">
+        </div>
+
+        <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-full">
           {PERIODS.map(p => (
-            <button key={p} onClick={() => handlePeriod(p)}
-              className={`px-3 py-2 rounded-lg text-xs font-mono transition-all ${period === p ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-400/30' : 'text-muted hover:text-bright hover:bg-white/5 border border-border'}`}>
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-3 py-1 rounded-full text-xs font-mono font-bold transition-all ${
+                period === p
+                  ? 'bg-sky-500/30 text-sky-300 border border-sky-400/40'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
               {p}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Idle warning */}
-      {current?.is_idle && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex items-center gap-3 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 mb-6">
-          <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
-          <div>
-            <span className="text-sm font-semibold text-yellow-400">Resource appears idle</span>
-            <p className="text-xs text-muted mt-0.5">
-              Avg CPU: {current.avg_cpu?.toFixed(1)}% over {period}. Consider downsizing or terminating.
-            </p>
+      {/* ── Metric Visualizations ─────────────────────────────────────────── */}
+      {m && (
+        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {m.cpu_utilization && (
+              <MetricChart
+                data={m.cpu_utilization}
+                label="🖥️ CPU Utilization"
+                color="#38bdf8"
+                unit="Percent"
+                refLine={80}
+              />
+            )}
+            {m.network_in_bytes && (
+              <MetricChart
+                data={m.network_in_bytes}
+                label="📥 Network Inbound Traffic"
+                color="#10b981"
+                unit="Bytes"
+              />
+            )}
+            {m.network_out_bytes && (
+              <MetricChart
+                data={m.network_out_bytes}
+                label="📤 Network Outbound Traffic"
+                color="#818cf8"
+                unit="Bytes"
+              />
+            )}
+            {m.disk_read_bytes && (
+              <MetricChart
+                data={m.disk_read_bytes}
+                label="💾 Disk Read IOPS"
+                color="#f59e0b"
+                unit="Bytes"
+              />
+            )}
           </div>
         </motion.div>
-      )}
-
-      {/* Summary stats */}
-      {current && (
-        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-2">
-            {selectedOption.type === 'ec2' && [
-              { label: 'Avg CPU', value: current.avg_cpu != null ? `${current.avg_cpu.toFixed(1)}%` : '—', color: (current.avg_cpu ?? 0) > 80 ? '#ef4444' : (current.avg_cpu ?? 0) < 5 ? '#f59e0b' : '#10b981' },
-              { label: 'Max CPU', value: current.max_cpu != null ? `${current.max_cpu.toFixed(1)}%` : '—', color: '#3b82f6' },
-              { label: 'Status', value: current.is_idle ? 'IDLE' : 'ACTIVE', color: current.is_idle ? '#f59e0b' : '#10b981' },
-              { label: 'Period', value: period, color: '#8b5cf6' },
-            ].map(s => (
-              <motion.div key={s.label} variants={ITEM} className="glass rounded-xl p-4">
-                <div className="text-xs font-mono text-muted mb-1">{s.label}</div>
-                <div className="text-xl font-mono font-bold" style={{ color: s.color }}>{s.value}</div>
-              </motion.div>
-            ))}
-            {selectedOption.type === 'lambda' && [
-              { label: 'Invocations (24h)', value: current.invocations.reduce((a, b) => a + b.value, 0).toFixed(0), color: '#10b981' },
-              { label: 'Errors (24h)', value: current.errors.reduce((a, b) => a + b.value, 0).toFixed(0), color: '#ef4444' },
-              { label: 'Status', value: current.is_idle ? 'IDLE' : 'ACTIVE', color: current.is_idle ? '#f59e0b' : '#10b981' },
-              { label: 'Period', value: period, color: '#8b5cf6' },
-            ].map(s => (
-              <motion.div key={s.label} variants={ITEM} className="glass rounded-xl p-4">
-                <div className="text-xs font-mono text-muted mb-1">{s.label}</div>
-                <div className="text-xl font-mono font-bold" style={{ color: s.color }}>{s.value}</div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* EC2 charts */}
-          {selectedOption.type === 'ec2' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <motion.div variants={ITEM}><MetricChart data={current.cpu_utilization} label="CPU Utilization" color="#3b82f6" unit="Percent" refLine={80} /></motion.div>
-              <motion.div variants={ITEM}><MetricChart data={current.network_in_bytes} label="Network In" color="#10b981" unit="Bytes" /></motion.div>
-              <motion.div variants={ITEM}><MetricChart data={current.network_out_bytes} label="Network Out" color="#8b5cf6" unit="Bytes" /></motion.div>
-              <motion.div variants={ITEM}><MetricChart data={current.disk_write_bytes} label="Disk Write" color="#f59e0b" unit="Bytes" /></motion.div>
-            </div>
-          )}
-
-          {/* RDS charts */}
-          {selectedOption.type === 'rds' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <motion.div variants={ITEM}><MetricChart data={current.cpu_utilization} label="CPU Utilization" color="#8b5cf6" unit="Percent" refLine={80} /></motion.div>
-              <motion.div variants={ITEM}><MetricChart data={current.db_connections} label="DB Connections" color="#06b6d4" unit="Count" /></motion.div>
-            </div>
-          )}
-
-          {/* Lambda charts */}
-          {selectedOption.type === 'lambda' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <motion.div variants={ITEM}><MetricChart data={current.invocations} label="Invocations" color="#10b981" unit="Count" /></motion.div>
-              <motion.div variants={ITEM}><MetricChart data={current.errors} label="Errors" color="#ef4444" unit="Count" /></motion.div>
-              <motion.div variants={ITEM}><MetricChart data={current.duration_ms} label="Duration (ms)" color="#3b82f6" unit="ms" /></motion.div>
-              <motion.div variants={ITEM}><MetricChart data={current.throttles} label="Throttles" color="#f97316" unit="Count" /></motion.div>
-            </div>
-          )}
-        </motion.div>
-      )}
-
-      {metricsLoading && !current && (
-        <div className="glass rounded-2xl p-12 text-center text-muted">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-cyan-400" />
-          Loading metrics…
-        </div>
       )}
     </div>
   )

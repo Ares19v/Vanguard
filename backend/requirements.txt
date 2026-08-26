@@ -11,7 +11,7 @@ google-generativeai==0.5.4
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 # ── Database ──────────────────────────────────────────────────────────────────
-sqlalchemy==2.0.30
+sqlalchemy>=2.0.36
 aiosqlite==0.20.0
 # ── Data Validation ───────────────────────────────────────────────────────────
 pydantic>=2.5.0,<3.0.0

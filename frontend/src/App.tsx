@@ -1,16 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import Sidebar from './components/Sidebar'
+import CelestialBackground from './components/CelestialBackground'
+import GlassWindowFrame from './components/GlassWindowFrame'
+
 import Dashboard from './pages/Dashboard'
 import Scanner from './pages/Scanner'
 import ThreatFeed from './pages/ThreatFeed'
 import Remediator from './pages/Remediator'
 import AIConsultant from './pages/AIConsultant'
 import ScanHistory from './pages/ScanHistory'
-import ResourceInventory from './pages/ResourceInventory'
-import CostDashboard from './pages/CostDashboard'
-import Metrics from './pages/Metrics'
-import IAMExplorer from './pages/IAMExplorer'
 import ConnectAccount from './pages/ConnectAccount'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useScan } from './hooks/useScan'
@@ -24,24 +22,27 @@ export default function App() {
   }, [fetchHistory])
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <Routes>
-          <Route path="/"          element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/scanner"   element={<Scanner />} />
-          <Route path="/threats"   element={<ThreatFeed />} />
-          <Route path="/remediate" element={<Remediator />} />
-          <Route path="/ai"        element={<AIConsultant />} />
-          <Route path="/history"   element={<ScanHistory />} />
-          <Route path="/inventory" element={<ResourceInventory />} />
-          <Route path="/costs"     element={<CostDashboard />} />
-          <Route path="/metrics"   element={<Metrics />} />
-          <Route path="/iam"       element={<IAMExplorer />} />
-          <Route path="/connect"   element={<ConnectAccount />} />
-        </Routes>
-      </main>
+    <div className="relative min-h-screen text-slate-100 selection:bg-sky-500 selection:text-white flex flex-col justify-between">
+      {/* ── Dynamic Starfield & Anime Cloudscape Background ─────────────── */}
+      <CelestialBackground />
+
+      {/* ── Main Floating Glass OS Command Center ────────────────────────── */}
+      <div className="flex-1 w-full flex items-center justify-center">
+        <GlassWindowFrame>
+          <Routes>
+            <Route path="/"          element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/scanner"   element={<Scanner />} />
+            <Route path="/remediate" element={<Remediator />} />
+            <Route path="/threats"   element={<ThreatFeed />} />
+            <Route path="/ai"        element={<AIConsultant />} />
+            <Route path="/history"   element={<ScanHistory />} />
+            <Route path="/connect"   element={<ConnectAccount />} />
+            {/* Fallback routes */}
+            <Route path="*"          element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </GlassWindowFrame>
+      </div>
     </div>
   )
 }

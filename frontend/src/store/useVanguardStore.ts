@@ -366,6 +366,8 @@ interface VanguardState {
   sidebarExpanded: boolean
   mockMode: boolean
   cleanMode: boolean
+  dryRun: boolean
+  searchQuery: string
 
   // ── Actions ───────────────────────────────────────────────────────────
   setFindings: (findings: Finding[]) => void
@@ -402,7 +404,12 @@ interface VanguardState {
   setSelectedFinding: (finding: Finding | null) => void
   toggleSidebar: () => void
   setMockMode: (mock: boolean) => void
+  toggleMockMode: () => void
   setCleanMode: (clean: boolean) => void
+  toggleCleanMode: () => void
+  setDryRun: (dryRun: boolean) => void
+  toggleDryRun: () => void
+  setSearchQuery: (query: string) => void
 }
 
 // ── Store implementation ───────────────────────────────────────────────────
@@ -445,6 +452,8 @@ export const useVanguardStore = create<VanguardState>()(
       sidebarExpanded: true,
       mockMode: true,
       cleanMode: false,
+      dryRun: true,
+      searchQuery: '',
 
       // ── Scan actions ──────────────────────────────────────────────────
       setFindings: (findings) => set({ findings }),
@@ -515,7 +524,15 @@ export const useVanguardStore = create<VanguardState>()(
       toggleSidebar: () =>
         set((state) => ({ sidebarExpanded: !state.sidebarExpanded })),
       setMockMode: (mockMode) => set({ mockMode }),
+      toggleMockMode: () =>
+        set((state) => ({ mockMode: !state.mockMode })),
       setCleanMode: (cleanMode) => set({ cleanMode }),
+      toggleCleanMode: () =>
+        set((state) => ({ cleanMode: !state.cleanMode })),
+      setDryRun: (dryRun) => set({ dryRun }),
+      toggleDryRun: () =>
+        set((state) => ({ dryRun: !state.dryRun })),
+      setSearchQuery: (searchQuery) => set({ searchQuery }),
     }),
     { name: 'vanguard-store' }
   )

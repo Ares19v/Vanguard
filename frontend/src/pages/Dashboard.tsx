@@ -1,258 +1,404 @@
-
-import { motion } from 'framer-motion'
+import { useState, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
-  ShieldCheck, AlertTriangle, Activity, Terminal,
-  TrendingUp, Layers
+  Play, RefreshCw, Zap, Bot,
+  CheckCircle2, Globe, Key, Database, ChevronDown, ChevronUp, Layers
 } from 'lucide-react'
-import {
-  ResponsiveContainer,
-  AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid
-} from 'recharts'
+import axios from 'axios'
 import { useVanguardStore } from '../store/useVanguardStore'
+import type { Finding, RemediationResult } from '../store/useVanguardStore'
 import { useScan } from '../hooks/useScan'
-import RiskRing from '../components/RiskRing'
 import SeverityBadge from '../components/SeverityBadge'
+import DiffViewer from '../components/DiffViewer'
 import { useNavigate } from 'react-router-dom'
-import { CleanDashboard } from '../components/CleanModePages'
 
-const STAGGER = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } }
-const ITEM = {
-  hidden: { opacity: 0, y: 16 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.4 } },
-}
+const STAGGER = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } }
+const ITEM = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.25 } } }
 
-const SERVICES = [
-  { name: 'S3',         icon: '🪣', color: '#f59e0b' },
-  { name: 'IAM',        icon: '🔑', color: '#ef4444' },
-  { name: 'EC2',        icon: '🖥️', color: '#3b82f6' },
-  { name: 'RDS',        icon: '🗄️', color: '#8b5cf6' },
-  { name: 'CloudTrail', icon: '📋', color: '#06b6d4' },
-  { name: 'GuardDuty',  icon: '👁️', color: '#10b981' },
-]
-
-const CHART_DATA = [
-  { name: '6h ago', score: 0  },
-  { name: '5h ago', score: 12 },
-  { name: '4h ago', score: 28 },
-  { name: '3h ago', score: 55 },
-  { name: '2h ago', score: 71 },
-  { name: '1h ago', score: 78 },
-  { name: 'Now',    score: 0  },
+const MONITORED_SERVICES = [
+  { name: 'Amazon S3', icon: '🪣', desc: 'Storage & ACLs' },
+  { name: 'AWS IAM', icon: '🔑', desc: 'Privilege & Keys' },
+  { name: 'Amazon EC2', icon: '🖥️', desc: 'Security Groups' },
+  { name: 'Amazon RDS', icon: '🗄️', desc: 'DB Encryption' },
+  { name: 'AWS CloudTrail', icon: '📋', desc: 'Audit Logging' },
+  { name: 'AWS GuardDuty', icon: '👁️', desc: 'Threat Detection' },
 ]
 
 export default function Dashboard() {
-  const { findings, overallScore, scanStatus, lastScanMode, scanDuration, threatEvents, cleanMode } = useVanguardStore()
+  const {
+    findings,
+    scanStatus,
+    dryRun,
+    setActiveFinding,
+    markFindingRemediated
+  } = useVanguardStore()
+
   const { triggerScan } = useScan()
   const navigate = useNavigate()
+  const detectionsRef = useRef<HTMLElement>(null)
 
-  const critical = findings.filter(f => f.severity === 'CRITICAL').length
-  const high     = findings.filter(f => f.severity === 'HIGH').length
-  const medium   = findings.filter(f => f.severity === 'MEDIUM').length
-  const low      = findings.filter(f => f.severity === 'LOW').length
+  const [category, setCategory] = useState<'all' | 'exposure' | 'iam' | 'storage' | 'fixed'>('all')
+  const [showAll, setShowAll] = useState(false)
+  const [diffResults, setDiffResults] = useState<Record<string, RemediationResult>>({})
+  const [expandedDiffId, setExpandedDiffId] = useState<string | null>(null)
+  const [loadingDiffId, setLoadingDiffId] = useState<string | null>(null)
+  const [remediatingId, setRemediatingId] = useState<string | null>(null)
 
-  // Fill real score into chart (don't mutate const)
-  const chartData = CHART_DATA.map((d, i) =>
-    i === CHART_DATA.length - 1 ? { ...d, score: overallScore } : d
-  )
+  const activeFindings = findings.filter(f => !f.is_remediated)
+  const fixedFindings  = findings.filter(f => f.is_remediated)
 
-  const topFinding = findings.find(f => f.severity === 'CRITICAL') || findings[0]
-  const recentThreats = threatEvents.slice(0, 5)
+  const filteredFindings = findings.filter(f => {
+    if (category === 'fixed') return f.is_remediated
+    if (f.is_remediated) return false
 
-  if (cleanMode) {
-    return <CleanDashboard score={overallScore} critical={critical} high={high} medium={medium} low={low} findings={findings} />
+    if (category === 'exposure') return f.service === 'S3' || f.service === 'EC2'
+    if (category === 'iam') return f.service === 'IAM'
+    if (category === 'storage') return f.service === 'RDS' || f.service === 'CloudTrail' || f.service === 'GuardDuty'
+    return true
+  })
+
+  // Show top 3 by default unless expanded or filtered
+  const displayedFindings = showAll ? filteredFindings : filteredFindings.slice(0, 3)
+  const hasMore = filteredFindings.length > 3
+
+  const isScanning = scanStatus === 'running'
+
+  const handleStartDetection = async () => {
+    await triggerScan()
+    setShowAll(true)
+    setTimeout(() => {
+      detectionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 150)
+  }
+
+  const handleToggleDiff = async (f: Finding) => {
+    if (expandedDiffId === f.id) {
+      setExpandedDiffId(null)
+      return
+    }
+
+    if (diffResults[f.id]) {
+      setExpandedDiffId(f.id)
+      return
+    }
+
+    setLoadingDiffId(f.id)
+    try {
+      const { data } = await axios.post<RemediationResult>(
+        `/api/v1/remediate/${f.id}`,
+        { dry_run: true }
+      )
+      setDiffResults(prev => ({ ...prev, [f.id]: data }))
+      setExpandedDiffId(f.id)
+    } catch {
+      // ignore
+    } finally {
+      setLoadingDiffId(null)
+    }
+  }
+
+  const handleFix = async (f: Finding) => {
+    setRemediatingId(f.id)
+    try {
+      const { data } = await axios.post<RemediationResult>(
+        `/api/v1/remediate/${f.id}`,
+        { dry_run: dryRun }
+      )
+      setDiffResults(prev => ({ ...prev, [f.id]: data }))
+      if (data.status === 'applied') {
+        markFindingRemediated(f.id)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setRemediatingId(null)
+    }
+  }
+
+  const handleAskAI = (f: Finding) => {
+    setActiveFinding(f)
+    navigate('/ai')
   }
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
-      {/* ── Header ────────────────────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-bright flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-accent" />
-            Security Overview
-          </h1>
-          <p className="text-sm text-muted mt-1">
-            {lastScanMode === 'mock' ? '🔵 Mock Environment' : '🔴 Live AWS Environment'}
-            {scanDuration > 0 && <span className="ml-2">· Scanned in {scanDuration}s</span>}
-          </p>
-        </div>
-        <button
-          onClick={triggerScan}
-          disabled={scanStatus === 'running'}
-          className="btn-primary flex items-center gap-2"
+    <div className="space-y-16">
+      {/* ── 1. Editorial Hero Section (Exact Reference Layout) ─────────────── */}
+      <section className="pt-8 pb-4 text-center max-w-3xl mx-auto space-y-6">
+        {/* Top Tagline Pill */}
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 border border-black/5 text-xs font-medium text-slate-600 shadow-sm"
         >
-          <Terminal className="w-4 h-4" />
-          {scanStatus === 'running' ? 'Scanning…' : 'Run Scan'}
-        </button>
-      </motion.div>
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />
+          <span>Autonomous Threat Detection & Cloud Remediation</span>
+        </motion.div>
 
-      <motion.div
-        variants={STAGGER}
-        initial="hidden"
-        animate="show"
-        className="space-y-6"
-      >
-        {/* ── Row 1: Risk ring + stat cards ──────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Hero Title */}
+        <motion.h1
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="text-4xl sm:text-5xl lg:text-6xl font-display font-semibold tracking-tight text-slate-950 leading-[1.12]"
+        >
+          We detect and eliminate cloud vulnerabilities
+        </motion.h1>
 
-          {/* Risk ring card */}
-          <motion.div variants={ITEM} className="glass rounded-2xl p-6 lg:col-span-1 flex flex-col items-center gap-4">
-            <div className="text-xs font-mono text-muted tracking-widest">RISK POSTURE</div>
-            <RiskRing score={overallScore} size={160} />
-            <div className="text-center">
-              <div className="text-sm font-semibold text-bright">{findings.length} findings</div>
-              <div className="text-xs text-muted">{findings.filter(f => f.is_remediated).length} remediated</div>
-            </div>
-          </motion.div>
+        {/* Hero Subtitle */}
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto font-normal leading-relaxed text-balance"
+        >
+          Continuous infrastructure auditing, instant exploit diagnosis, and automated 1-click remediation before competitors or attackers even notice.
+        </motion.p>
 
-          {/* Stat cards */}
-          <motion.div variants={ITEM} className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: 'CRITICAL', value: critical, color: '#ef4444', icon: AlertTriangle },
-              { label: 'HIGH',     value: high,     color: '#f97316', icon: TrendingUp   },
-              { label: 'MEDIUM',   value: medium,   color: '#f59e0b', icon: Activity     },
-              { label: 'LOW',      value: low,      color: '#3b82f6', icon: Layers       },
-            ].map(({ label, value, color, icon: Icon }) => (
-              <div key={label} className="metric-card">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-muted">{label}</span>
-                  <Icon className="w-4 h-4" style={{ color }} />
-                </div>
-                <div
-                  className="text-4xl font-mono font-bold number-glow"
-                  style={{ color }}
-                >
-                  {value}
-                </div>
-                <div className="text-xs text-muted">
-                  {value === 0 ? 'All clear' : `${value} finding${value !== 1 ? 's' : ''}`}
-                </div>
+        {/* Center Primary CTA Pill (Matching Reference) */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+          className="pt-2 flex items-center justify-center gap-4"
+        >
+          <button
+            onClick={handleStartDetection}
+            disabled={isScanning}
+            className="btn-pill-dark text-sm sm:text-base py-3 px-8 shadow-xl"
+          >
+            {isScanning ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Play className="w-4 h-4 fill-white" />
+            )}
+            <span>{isScanning ? 'Running Live Detection…' : 'Start Live Detection'}</span>
+          </button>
+        </motion.div>
+
+        {/* Monitored AWS Services Bar (Matching "TRUSTED BY" in Reference) */}
+        <div className="pt-10">
+          <div className="text-[11px] font-mono tracking-widest text-slate-400 uppercase font-semibold mb-4">
+            Monitoring Core Cloud Infrastructure
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 opacity-70 grayscale hover:grayscale-0 transition-all">
+            {MONITORED_SERVICES.map(s => (
+              <div key={s.name} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <span>{s.icon}</span>
+                <span>{s.name}</span>
               </div>
             ))}
-          </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 2. Live Detection Stream & Actionable Queue ────────────────────── */}
+      <section ref={detectionsRef} id="active-detections" className="space-y-6 max-w-4xl mx-auto scroll-mt-8">
+        {/* Section Header & Filter Tabs */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 pb-4">
+          <div>
+            <h2 className="text-xl font-display font-semibold text-slate-950 flex items-center gap-2.5">
+              <span>Active Detections</span>
+              <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-900 text-white">
+                {activeFindings.length}
+              </span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {showAll ? `Displaying all ${filteredFindings.length} detected risks` : `Showing top ${displayedFindings.length} prioritized detections`}
+            </p>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex gap-1.5 p-1 bg-white/60 border border-black/5 rounded-full text-xs shadow-sm">
+            {[
+              { id: 'all', label: 'All', count: activeFindings.length, icon: null },
+              { id: 'exposure', label: 'Public Ingress', count: activeFindings.filter(f => f.service === 'S3' || f.service === 'EC2').length, icon: Globe },
+              { id: 'iam', label: 'Identity', count: activeFindings.filter(f => f.service === 'IAM').length, icon: Key },
+              { id: 'storage', label: 'Data', count: activeFindings.filter(f => f.service === 'RDS' || f.service === 'CloudTrail' || f.service === 'GuardDuty').length, icon: Database },
+              { id: 'fixed', label: 'Resolved', count: fixedFindings.length, icon: CheckCircle2 },
+            ].map(tab => {
+              const Icon = tab.icon
+              const isActive = category === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setCategory(tab.id as any)
+                    setShowAll(false)
+                  }}
+                  className={`px-3 py-1.5 rounded-full font-medium transition-all flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-slate-900 text-white font-semibold shadow-sm'
+                      : 'text-slate-600 hover:text-slate-950'
+                  }`}
+                >
+                  {Icon && <Icon className="w-3 h-3" />}
+                  <span>{tab.label}</span>
+                  {tab.count > 0 && (
+                    <span className={`text-[10px] font-mono px-1.5 rounded-full ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-black/5 text-slate-600'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
-        {/* ── Row 2: Risk trend + services ────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Risk trend chart */}
-          <motion.div variants={ITEM} className="glass rounded-2xl p-5 lg:col-span-2">
-            <div className="text-xs font-mono text-muted tracking-wider mb-4">📈 RISK SCORE TREND</div>
-            <ResponsiveContainer width="100%" height={160}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'JetBrains Mono' }} />
-                <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8 }}
-                  labelStyle={{ color: '#94a3b8' }}
-                  itemStyle={{ color: '#3b82f6' }}
-                />
-                <Area type="monotone" dataKey="score" stroke="#3b82f6" fill="url(#riskGrad)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </motion.div>
+        {/* Finding Cards List */}
+        {filteredFindings.length === 0 ? (
+          <div className="glass-light-card p-16 text-center">
+            <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-3 opacity-80" />
+            <h3 className="text-base font-semibold text-slate-900">No vulnerabilities detected</h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              Your monitored AWS infrastructure meets secure posture baselines.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Scrollable Viewport when expanded */}
+            <motion.div
+              variants={STAGGER}
+              initial="hidden"
+              animate="show"
+              className={`space-y-3.5 ${
+                showAll && filteredFindings.length > 4
+                  ? 'max-h-[620px] overflow-y-auto pr-1.5 rounded-2xl scrollbar-thin'
+                  : ''
+              }`}
+            >
+              {displayedFindings.map(f => {
+                const isRemediating = remediatingId === f.id
+                const isDiffOpen = expandedDiffId === f.id
+                const isDiffLoading = loadingDiffId === f.id
+                const diffResult = diffResults[f.id]
 
-          {/* Services scanned */}
-          <motion.div variants={ITEM} className="glass rounded-2xl p-5">
-            <div className="text-xs font-mono text-muted tracking-wider mb-4">🔍 SERVICES SCANNED</div>
-            <div className="grid grid-cols-2 gap-2">
-              {SERVICES.map(({ name, icon, color }) => {
-                const svcFindings = findings.filter(f => f.service === name).length
                 return (
-                  <div key={name} className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.05] transition-colors cursor-pointer"
-                    onClick={() => navigate('/scanner')}
+                  <motion.div
+                    key={f.id}
+                    variants={ITEM}
+                    className={`glass-light-card p-6 transition-all ${
+                      f.is_remediated ? 'opacity-65' : ''
+                    }`}
                   >
-                    <span className="text-base">{icon}</span>
-                    <div>
-                      <div className="text-xs font-semibold text-bright">{name}</div>
-                      <div className="text-[10px] font-mono" style={{ color }}>
-                        {svcFindings} {svcFindings === 1 ? 'issue' : 'issues'}
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      {/* Vulnerability Meta */}
+                      <div className="flex items-start gap-3.5 flex-1 min-w-[280px]">
+                        <div className="mt-0.5">
+                          <SeverityBadge severity={f.severity} />
+                        </div>
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm sm:text-base font-semibold text-slate-900">{f.title}</h3>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                              {f.service}
+                            </span>
+                          </div>
+                          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">{f.description}</p>
+                          
+                          {/* Target Resource */}
+                          <div className="text-xs font-mono text-slate-500 pt-1 truncate">
+                            Target: <span className="text-slate-800 font-medium">{f.resource}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Strip */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* AI Copilot Button */}
+                        <button
+                          onClick={() => handleAskAI(f)}
+                          className="btn-pill-white text-xs"
+                          title="Investigate exploit risk with AI Copilot"
+                        >
+                          <Bot className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>AI Diagnosis</span>
+                        </button>
+
+                        {/* Diff Toggle */}
+                        <button
+                          onClick={() => handleToggleDiff(f)}
+                          disabled={isDiffLoading}
+                          className={`btn-pill-white text-xs ${isDiffOpen ? 'bg-slate-100 border-slate-300' : ''}`}
+                        >
+                          {isDiffLoading ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : isDiffOpen ? (
+                            <ChevronUp className="w-3 h-3" />
+                          ) : (
+                            <ChevronDown className="w-3 h-3" />
+                          )}
+                          <span>{isDiffOpen ? 'Close Patch' : 'Inspect Patch'}</span>
+                        </button>
+
+                        {/* Execute Fix */}
+                        {!f.is_remediated ? (
+                          <button
+                            onClick={() => handleFix(f)}
+                            disabled={isRemediating}
+                            className="btn-pill-dark text-xs py-2 px-4"
+                          >
+                            {isRemediating ? (
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
+                            )}
+                            <span>{isRemediating ? 'Fixing…' : (dryRun ? 'Simulate Fix' : '1-Click Fix')}</span>
+                          </button>
+                        ) : (
+                          <span className="badge-fixed px-3 py-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Remediated
+                          </span>
+                        )}
                       </div>
                     </div>
-                  </div>
+
+                    {/* Diff Drawer */}
+                    <AnimatePresence>
+                      {isDiffOpen && diffResult && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-5 pt-4 border-t border-slate-200/80 overflow-hidden"
+                        >
+                          <DiffViewer result={diffResult} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 )
               })}
-            </div>
-          </motion.div>
-        </div>
+            </motion.div>
 
-        {/* ── Row 3: Top finding + recent threats ─────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Top finding */}
-          <motion.div variants={ITEM} className="glass rounded-2xl p-5">
-            <div className="text-xs font-mono text-muted tracking-wider mb-4">
-              🚨 TOP PRIORITY FINDING
-            </div>
-            {topFinding ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <SeverityBadge severity={topFinding.severity} size="md" />
-                  <span className="text-xs font-mono text-muted">{topFinding.service}</span>
-                </div>
-                <h3 className="text-sm font-semibold text-bright">{topFinding.title}</h3>
-                <p className="text-xs text-muted leading-relaxed line-clamp-3">{topFinding.description}</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => navigate('/remediate')}
-                    className="btn-danger text-xs flex items-center gap-1"
-                  >
-                    Fix Now
-                  </button>
-                  <button
-                    onClick={() => navigate('/scanner')}
-                    className="btn-ghost text-xs"
-                  >
-                    View All
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-32 text-muted">
-                <ShieldCheck className="w-8 h-8 mb-2 text-success" />
-                <span className="text-sm">Run a scan to see findings</span>
+            {/* ── Dropdown / Expand Toggle Bar ──────────────────────────────── */}
+            {hasMore && (
+              <div className="pt-2 flex flex-col items-center justify-center">
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className="btn-pill-white text-xs sm:text-sm py-2.5 px-6 shadow-sm border border-slate-300/80 hover:bg-slate-50 flex items-center gap-2 group transition-all"
+                >
+                  <Layers className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-800 transition-colors" />
+                  <span className="font-semibold text-slate-800">
+                    {showAll
+                      ? 'Collapse to Top 3 Detections'
+                      : `View All ${filteredFindings.length} Detections (Scrollable)`}
+                  </span>
+                  {showAll ? (
+                    <ChevronUp className="w-4 h-4 text-slate-600 group-hover:-translate-y-0.5 transition-transform" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-600 group-hover:translate-y-0.5 transition-transform" />
+                  )}
+                </button>
+                <p className="text-[11px] text-slate-400 mt-1.5 font-mono">
+                  {showAll ? 'Scroll through all active threats above' : `${filteredFindings.length - 3} additional vulnerabilities hidden`}
+                </p>
               </div>
             )}
-          </motion.div>
-
-          {/* Recent threat events */}
-          <motion.div variants={ITEM} className="glass rounded-2xl p-5">
-            <div className="text-xs font-mono text-muted tracking-wider mb-4">
-              📡 LIVE THREAT EVENTS
-            </div>
-            <div className="space-y-2">
-              {recentThreats.length > 0 ? recentThreats.map(evt => (
-                <div key={evt.event_id} className="flex items-center gap-3 text-xs p-2 rounded-lg bg-white/[0.02]">
-                  <div className={`shrink-0 ${evt.severity === 'CRITICAL' || evt.severity === 'HIGH' ? 'dot-critical' : 'dot-warn'}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-mono text-muted truncate">{evt.source_ip} → :{evt.target_port}</div>
-                    <div className="text-[10px] text-muted/60">{evt.event_type} · {evt.geo.country}</div>
-                  </div>
-                  <SeverityBadge severity={evt.severity as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO'} />
-                </div>
-              )) : (
-                <div className="text-xs text-muted text-center py-8">
-                  Connecting to threat feed…
-                </div>
-              )}
-            </div>
-            {recentThreats.length > 0 && (
-              <button onClick={() => navigate('/threats')} className="btn-ghost text-xs w-full mt-3">
-                View Live Feed →
-              </button>
-            )}
-          </motion.div>
-        </div>
-      </motion.div>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

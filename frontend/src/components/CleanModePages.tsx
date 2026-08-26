@@ -22,23 +22,23 @@ function BigCard({
     <motion.div
       variants={ITEM}
       onClick={onClick}
-      className={`glass rounded-2xl p-6 cursor-pointer hover:bg-white/[0.05] transition-colors border ${
-        color === 'red'    ? 'border-red-400/20'    :
-        color === 'yellow' ? 'border-yellow-400/20'  :
-        color === 'blue'   ? 'border-blue-400/20'    :
-        color === 'purple' ? 'border-purple-400/20'  :
-                             'border-emerald-400/20'
+      className={`glass-cloud-card rounded-3xl p-6 cursor-pointer hover:bg-white/[0.08] transition-all border ${
+        color === 'red'    ? 'border-rose-400/30 bg-rose-500/10'    :
+        color === 'yellow' ? 'border-amber-400/30 bg-amber-500/10'  :
+        color === 'blue'   ? 'border-sky-400/30 bg-sky-500/10'    :
+        color === 'purple' ? 'border-indigo-400/30 bg-indigo-500/10'  :
+                             'border-emerald-400/30 bg-emerald-500/10'
       }`}
     >
       <div className="text-4xl mb-3">{emoji}</div>
       <div className={`text-xl font-bold mb-1 ${
-        color === 'red'    ? 'text-red-400'    :
-        color === 'yellow' ? 'text-yellow-400'  :
-        color === 'blue'   ? 'text-blue-400'    :
-        color === 'purple' ? 'text-purple-400'  :
+        color === 'red'    ? 'text-rose-400'    :
+        color === 'yellow' ? 'text-amber-400'  :
+        color === 'blue'   ? 'text-sky-400'    :
+        color === 'purple' ? 'text-indigo-400'  :
                              'text-emerald-400'
       }`}>{title}</div>
-      <div className="text-sm text-muted leading-relaxed">{subtitle}</div>
+      <div className="text-xs text-slate-300 leading-relaxed">{subtitle}</div>
     </motion.div>
   )
 }
@@ -59,7 +59,7 @@ export function CleanDashboard({
 
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
+    <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mb-8 text-center">
         <div className="text-6xl mb-3">{statusEmoji}</div>
         <h1 className="text-3xl font-bold text-bright">Your Cloud is {statusText}</h1>

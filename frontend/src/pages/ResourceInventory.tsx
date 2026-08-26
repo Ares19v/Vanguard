@@ -6,25 +6,25 @@ import { CleanInventory } from '../components/CleanModePages'
 
 const API = 'http://localhost:8000/api/v1'
 
-const STAGGER = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } }
-const ITEM = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.35 } } }
+const STAGGER = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } }
+const ITEM = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.3 } } }
 
 const TABS = ['EC2', 'S3', 'RDS', 'Lambda', 'VPC', 'Elastic IPs', 'Load Balancers']
 
 function StateBadge({ state }: { state: string }) {
   const color =
-    state === 'running' || state === 'available' || state === 'active' ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' :
-    state === 'stopped' || state === 'stopped' ? 'text-red-400 bg-red-400/10 border-red-400/20' :
-    'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'
-  return <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${color}`}>{state}</span>
+    state === 'running' || state === 'available' || state === 'active' ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30' :
+    state === 'stopped' ? 'text-rose-300 bg-rose-500/15 border-rose-500/30' :
+    'text-amber-300 bg-amber-500/15 border-amber-500/30'
+  return <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${color}`}>{state}</span>
 }
 
 function UptimeBadge({ seconds }: { seconds: number }) {
-  if (!seconds) return <span className="text-muted text-xs">—</span>
+  if (!seconds) return <span className="text-slate-400 text-xs">—</span>
   const d = Math.floor(seconds / 86400)
   const h = Math.floor((seconds % 86400) / 3600)
   const m = Math.floor((seconds % 3600) / 60)
-  return <span className="font-mono text-xs text-bright">{d}d {h}h {m}m</span>
+  return <span className="font-mono text-xs text-white">{d}d {h}h {m}m</span>
 }
 
 function formatBytes(bytes: number) {
@@ -38,7 +38,6 @@ export default function ResourceInventory() {
   const { inventory, inventoryLoading, setInventory, setInventoryLoading, cleanMode } = useVanguardStore()
   const [tab, setTab] = useState('EC2')
   const [allRegions, setAllRegions] = useState(false)
-  const [drawer, setDrawer] = useState<Record<string, unknown> | null>(null)
 
   const fetchInventory = async (ar = allRegions) => {
     setInventoryLoading(true)
@@ -58,110 +57,118 @@ export default function ResourceInventory() {
   if (cleanMode && inv) return <CleanInventory inventory={inv} />
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
         <div>
-          <h1 className="text-2xl font-bold text-bright flex items-center gap-2">
-            <Layers className="w-6 h-6 text-purple-400" /> Resource Inventory
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-white flex items-center gap-2">
+            <Layers className="w-6 h-6 text-sky-400" />
+            <span>AWS Multi-Service Resource Inventory</span>
           </h1>
-          <p className="text-sm text-muted mt-1">
-            {inv ? `${inv.total_resources} resources · ${inv.idle_resources} idle · scanned ${inv.regions_scanned.join(', ')}` : 'Loading…'}
+          <p className="text-xs text-sky-200/70 mt-1">
+            {inv ? `Cataloguing ${inv.total_resources} resources · ${inv.idle_resources} idle assets · Scanned ${inv.regions_scanned.join(', ')}` : 'Scanning infrastructure assets…'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => { setAllRegions(!allRegions); fetchInventory(!allRegions) }}
-            className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition-all ${allRegions ? 'border-purple-400/40 text-purple-400 bg-purple-400/10' : 'border-border text-muted hover:text-bright'}`}
+            className={`btn-pill-secondary text-xs py-2 px-3.5 ${allRegions ? 'border-sky-400 text-sky-300 bg-sky-500/20' : ''}`}
           >
-            {allRegions ? <Globe className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
-            {allRegions ? 'All Regions' : 'Single Region'}
+            {allRegions ? <Globe className="w-3.5 h-3.5 text-sky-300" /> : <MapPin className="w-3.5 h-3.5 text-slate-400" />}
+            <span>{allRegions ? 'All AWS Regions' : 'Primary Region (us-east-1)'}</span>
           </button>
-          <button onClick={() => fetchInventory()} disabled={inventoryLoading}
-            className="btn-primary flex items-center gap-2 text-sm">
-            <RefreshCw className={`w-4 h-4 ${inventoryLoading ? 'animate-spin' : ''}`} />
-            {inventoryLoading ? 'Scanning…' : 'Refresh'}
+
+          <button
+            onClick={() => fetchInventory()}
+            disabled={inventoryLoading}
+            className="btn-pill-primary text-xs py-2 px-4 shadow-lg"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${inventoryLoading ? 'animate-spin' : ''}`} />
+            <span>{inventoryLoading ? 'Scanning…' : 'Refresh'}</span>
           </button>
         </div>
       </motion.div>
 
-      {/* Summary cards */}
+      {/* ── Summary Candy Cards ───────────────────────────────────────────── */}
       {inv && (
         <motion.div variants={STAGGER} initial="hidden" animate="show"
-          className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+          className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {[
-            { label: 'EC2', value: inv.ec2_instances.length, icon: '🖥️', color: '#3b82f6' },
-            { label: 'S3', value: inv.s3_buckets.length, icon: '🪣', color: '#f59e0b' },
-            { label: 'RDS', value: inv.rds_instances.length, icon: '🗄️', color: '#8b5cf6' },
-            { label: 'Lambda', value: inv.lambda_functions.length, icon: '⚡', color: '#10b981' },
-            { label: 'VPCs', value: inv.vpcs.length, icon: '🌐', color: '#06b6d4' },
-            { label: 'Elastic IPs', value: inv.elastic_ips.length, icon: '📌', color: '#f97316' },
-            { label: 'Load Balancers', value: inv.load_balancers.length, icon: '⚖️', color: '#ec4899' },
-          ].map(({ label, value, icon, color }) => (
-            <motion.div key={label} variants={ITEM}
-              className="glass rounded-xl p-3 cursor-pointer hover:bg-white/[0.04] transition-colors"
-              onClick={() => setTab(label === 'Elastic IPs' ? 'Elastic IPs' : label === 'Load Balancers' ? 'Load Balancers' : label)}>
-              <div className="text-lg mb-1">{icon}</div>
-              <div className="text-xl font-mono font-bold" style={{ color }}>{value}</div>
-              <div className="text-[10px] text-muted">{label}</div>
+            { label: 'EC2', value: inv.ec2_instances.length, icon: '🖥️' },
+            { label: 'S3', value: inv.s3_buckets.length, icon: '🪣' },
+            { label: 'RDS', value: inv.rds_instances.length, icon: '🗄️' },
+            { label: 'Lambda', value: inv.lambda_functions.length, icon: '⚡' },
+            { label: 'VPCs', value: inv.vpcs.length, icon: '🌐' },
+            { label: 'Elastic IPs', value: inv.elastic_ips.length, icon: '📌' },
+            { label: 'Load Balancers', value: inv.load_balancers.length, icon: '⚖️' },
+          ].map(({ label, value, icon }) => (
+            <motion.div
+              key={label}
+              variants={ITEM}
+              className={`glass-cloud-card p-3.5 cursor-pointer transition-all rounded-2xl ${tab === label ? 'bg-sky-500/20 border-sky-400/40 shadow-md' : 'hover:bg-white/10'}`}
+              onClick={() => setTab(label)}
+            >
+              <div className="text-xl mb-1">{icon}</div>
+              <div className="text-xl font-display font-bold text-white">{value}</div>
+              <div className="text-[10px] font-mono text-slate-300 uppercase mt-0.5">{label}</div>
             </motion.div>
           ))}
         </motion.div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+      {/* ── Tab Pills ────────────────────────────────────────────────────── */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 p-1 bg-white/5 border border-white/10 rounded-full w-fit">
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${tab === t ? 'bg-purple-500/20 text-purple-400 border border-purple-400/30' : 'text-muted hover:text-bright hover:bg-white/5'}`}>
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              tab === t
+                ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
+            }`}
+          >
             {t}
           </button>
         ))}
       </div>
 
-      {/* Content */}
+      {/* ── Main Tab Content ──────────────────────────────────────────────── */}
       {inventoryLoading && !inv && (
-        <div className="glass rounded-2xl p-12 text-center text-muted">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-purple-400" />
-          Scanning resources…
+        <div className="glass-cloud-card rounded-3xl p-16 text-center text-slate-400">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-sky-400" />
+          <span>Cataloguing AWS cloud inventory…</span>
         </div>
       )}
 
       {inv && tab === 'EC2' && (
-        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-2">
+        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-3">
           {inv.ec2_instances.map(i => (
-            <motion.div key={i.instance_id} variants={ITEM}
-              className="glass rounded-xl p-4 cursor-pointer hover:bg-white/[0.04] transition-colors"
-              onClick={() => setDrawer(i as unknown as Record<string, unknown>)}>
-              <div className="flex items-center justify-between">
+            <motion.div
+              key={i.instance_id}
+              variants={ITEM}
+              className="glass-cloud-card p-4.5 cursor-pointer hover:bg-white/10 transition-all rounded-2xl"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-lg">🖥️</span>
+                  <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-lg">
+                    🖥️
+                  </div>
                   <div>
-                    <div className="font-semibold text-bright text-sm">{(i.tags as Record<string, string>)['Name'] || i.instance_id}</div>
-                    <div className="text-xs text-muted font-mono">{i.instance_id}</div>
+                    <div className="font-bold text-white text-sm">{(i.tags as Record<string, string>)['Name'] || i.instance_id}</div>
+                    <div className="text-xs text-slate-400 font-mono">{i.instance_id} · {i.region}</div>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-4 text-right">
                   <div className="hidden sm:block">
-                    <div className="text-xs text-muted">Type</div>
-                    <div className="text-xs font-mono text-bright">{i.instance_type}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">TYPE</div>
+                    <div className="text-xs font-mono font-semibold text-white">{i.instance_type}</div>
                   </div>
                   <div className="hidden md:block">
-                    <div className="text-xs text-muted">Uptime</div>
+                    <div className="text-[10px] text-slate-400 font-mono">UPTIME</div>
                     <UptimeBadge seconds={i.uptime_seconds} />
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="text-xs text-muted">CPU (avg)</div>
-                    <div className={`text-xs font-mono ${(i.cpu_utilization ?? 0) > 80 ? 'text-red-400' : (i.cpu_utilization ?? 0) < 5 ? 'text-yellow-400' : 'text-bright'}`}>
-                      {i.cpu_utilization != null ? `${i.cpu_utilization}%` : '—'}
-                    </div>
-                  </div>
-                  <div className="hidden lg:block">
-                    <div className="text-xs text-muted">Est. Cost</div>
-                    <div className="text-xs font-mono text-emerald-400">
-                      {i.monthly_cost_estimate != null ? `$${i.monthly_cost_estimate}/mo` : '—'}
-                    </div>
                   </div>
                   <StateBadge state={i.state} />
                 </div>
@@ -172,43 +179,32 @@ export default function ResourceInventory() {
       )}
 
       {inv && tab === 'S3' && (
-        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-2">
+        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-3">
           {inv.s3_buckets.map(b => (
-            <motion.div key={b.name} variants={ITEM}
-              className="glass rounded-xl p-4 cursor-pointer hover:bg-white/[0.04] transition-colors"
-              onClick={() => setDrawer(b as unknown as Record<string, unknown>)}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">🪣</span>
-                  <div>
-                    <div className="font-semibold text-bright text-sm">{b.name}</div>
-                    <div className="text-xs text-muted">{b.region}</div>
-                  </div>
+            <motion.div
+              key={b.name}
+              variants={ITEM}
+              className="glass-cloud-card p-4.5 flex flex-wrap items-center justify-between gap-3 rounded-2xl"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-lg">
+                  🪣
                 </div>
-                <div className="flex items-center gap-6 text-right">
-                  <div className="hidden sm:block">
-                    <div className="text-xs text-muted">Size</div>
-                    <div className="text-xs font-mono text-bright">{b.total_size_gb >= 1000 ? `${(b.total_size_gb/1024).toFixed(1)} TB` : `${b.total_size_gb} GB`}</div>
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="text-xs text-muted">Objects</div>
-                    <div className="text-xs font-mono text-bright">{b.object_count.toLocaleString()}</div>
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="text-xs text-muted">Encryption</div>
-                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${b.encryption !== 'None' ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/10' : 'text-red-400 border-red-400/20 bg-red-400/10'}`}>{b.encryption}</span>
-                  </div>
-                  <div className="hidden lg:block">
-                    <div className="text-xs text-muted">Public Access</div>
-                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${b.public_access_blocked ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/10' : 'text-red-400 border-red-400/20 bg-red-400/10'}`}>
-                      {b.public_access_blocked ? 'Blocked' : '⚠ OPEN'}
-                    </span>
-                  </div>
-                  <div className="hidden lg:block">
-                    <div className="text-xs text-muted">Est. Cost</div>
-                    <div className="text-xs font-mono text-emerald-400">{b.estimated_monthly_cost != null ? `$${b.estimated_monthly_cost}/mo` : '—'}</div>
-                  </div>
+                <div>
+                  <div className="font-bold text-white text-sm">{b.name}</div>
+                  <div className="text-xs text-slate-400 font-mono">{b.region} · {formatBytes(b.total_size_bytes)} · {b.object_count} objects</div>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${
+                  b.public_access_blocked ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/15' : 'text-rose-300 border-rose-500/30 bg-rose-500/15'
+                }`}>
+                  {b.public_access_blocked ? '🔒 PUBLIC BLOCKED' : '⚠️ PUBLIC READ'}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
+                  {b.encryption}
+                </span>
               </div>
             </motion.div>
           ))}
@@ -216,208 +212,34 @@ export default function ResourceInventory() {
       )}
 
       {inv && tab === 'RDS' && (
-        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-2">
+        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-3">
           {inv.rds_instances.map(r => (
-            <motion.div key={r.instance_id} variants={ITEM}
-              className="glass rounded-xl p-4 cursor-pointer hover:bg-white/[0.04] transition-colors"
-              onClick={() => setDrawer(r as unknown as Record<string, unknown>)}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">🗄️</span>
-                  <div>
-                    <div className="font-semibold text-bright text-sm">{r.instance_id}</div>
-                    <div className="text-xs text-muted">{r.engine} {r.engine_version} · {r.instance_class}</div>
-                  </div>
+            <motion.div
+              key={r.instance_id}
+              variants={ITEM}
+              className="glass-cloud-card p-4.5 flex flex-wrap items-center justify-between gap-3 rounded-2xl"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-lg">
+                  🗄️
                 </div>
-                <div className="flex items-center gap-5 text-right">
-                  <div className="hidden sm:block">
-                    <div className="text-xs text-muted">Storage</div>
-                    <div className="text-xs font-mono text-bright">{r.allocated_storage_gb} GB</div>
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="text-xs text-muted">Multi-AZ</div>
-                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${r.multi_az ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/10' : 'text-muted border-border'}`}>{r.multi_az ? 'Yes' : 'No'}</span>
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="text-xs text-muted">Public</div>
-                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${r.publicly_accessible ? 'text-red-400 border-red-400/20 bg-red-400/10' : 'text-emerald-400 border-emerald-400/20 bg-emerald-400/10'}`}>{r.publicly_accessible ? '⚠ YES' : 'No'}</span>
-                  </div>
-                  <div className="hidden lg:block">
-                    <div className="text-xs text-muted">Est. Cost</div>
-                    <div className="text-xs font-mono text-emerald-400">{r.monthly_cost_estimate != null ? `$${r.monthly_cost_estimate}/mo` : '—'}</div>
-                  </div>
-                  <StateBadge state={r.status} />
+                <div>
+                  <div className="font-bold text-white text-sm">{r.instance_id}</div>
+                  <div className="text-xs text-slate-400 font-mono">{r.engine} {r.engine_version} · {r.instance_class}</div>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <StateBadge state={r.status} />
+                <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${
+                  r.publicly_accessible ? 'text-rose-300 border-rose-500/30 bg-rose-500/15' : 'text-emerald-300 border-emerald-500/30 bg-emerald-500/15'
+                }`}>
+                  {r.publicly_accessible ? '⚠️ PUBLIC ACCESS' : '🔒 PRIVATE VPC'}
+                </span>
               </div>
             </motion.div>
           ))}
         </motion.div>
-      )}
-
-      {inv && tab === 'Lambda' && (
-        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-2">
-          {inv.lambda_functions.map(f => (
-            <motion.div key={f.function_name} variants={ITEM}
-              className="glass rounded-xl p-4 cursor-pointer hover:bg-white/[0.04] transition-colors"
-              onClick={() => setDrawer(f as unknown as Record<string, unknown>)}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">⚡</span>
-                  <div>
-                    <div className="font-semibold text-bright text-sm">{f.function_name}</div>
-                    <div className="text-xs text-muted">{f.runtime} · {f.memory_mb}MB · {f.timeout_seconds}s timeout</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-5 text-right">
-                  <div className="hidden sm:block">
-                    <div className="text-xs text-muted">Invocations (24h)</div>
-                    <div className="text-xs font-mono text-bright">{f.invocations_24h?.toLocaleString() ?? '—'}</div>
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="text-xs text-muted">Errors (24h)</div>
-                    <div className={`text-xs font-mono ${(f.errors_24h ?? 0) > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{f.errors_24h ?? '—'}</div>
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="text-xs text-muted">Avg Duration</div>
-                    <div className="text-xs font-mono text-bright">{f.avg_duration_ms != null ? `${f.avg_duration_ms.toFixed(0)}ms` : '—'}</div>
-                  </div>
-                  <div className="hidden lg:block">
-                    <div className="text-xs text-muted">Code Size</div>
-                    <div className="text-xs font-mono text-muted">{formatBytes(f.code_size_bytes)}</div>
-                  </div>
-                  {(f.invocations_24h ?? 0) === 0 && <span className="text-[10px] font-mono px-2 py-0.5 rounded border text-yellow-400 border-yellow-400/20 bg-yellow-400/10">IDLE</span>}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
-
-      {inv && tab === 'VPC' && (
-        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-2">
-          {inv.vpcs.map(v => (
-            <motion.div key={v.vpc_id} variants={ITEM}
-              className="glass rounded-xl p-4 cursor-pointer hover:bg-white/[0.04] transition-colors"
-              onClick={() => setDrawer(v as unknown as Record<string, unknown>)}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">🌐</span>
-                  <div>
-                    <div className="font-semibold text-bright text-sm">{(v.tags as Record<string, string>)['Name'] || v.vpc_id}</div>
-                    <div className="text-xs text-muted font-mono">{v.vpc_id} · {v.cidr_block}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-5">
-                  <div className="hidden sm:block text-right">
-                    <div className="text-xs text-muted">Subnets</div>
-                    <div className="text-xs font-mono text-bright">{v.subnet_count}</div>
-                  </div>
-                  <div className="hidden md:block text-right">
-                    <div className="text-xs text-muted">NAT GWs</div>
-                    <div className="text-xs font-mono text-bright">{v.nat_gateways}</div>
-                  </div>
-                  <div className="hidden md:block text-right">
-                    <div className="text-xs text-muted">Security Groups</div>
-                    <div className="text-xs font-mono text-bright">{v.security_groups}</div>
-                  </div>
-                  {v.is_default && <span className="text-[10px] font-mono px-2 py-0.5 rounded border text-yellow-400 border-yellow-400/20 bg-yellow-400/10">DEFAULT</span>}
-                  <StateBadge state={v.state} />
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
-
-      {inv && tab === 'Elastic IPs' && (
-        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-2">
-          {inv.elastic_ips.map(e => (
-            <motion.div key={e.allocation_id} variants={ITEM} className="glass rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">📌</span>
-                  <div>
-                    <div className="font-semibold text-bright text-sm font-mono">{e.public_ip}</div>
-                    <div className="text-xs text-muted">{e.allocation_id}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="hidden sm:block text-right">
-                    <div className="text-xs text-muted">Associated With</div>
-                    <div className="text-xs font-mono text-bright">{e.associated_instance || '—'}</div>
-                  </div>
-                  {e.is_idle
-                    ? <span className="text-[10px] font-mono px-2 py-0.5 rounded border text-red-400 border-red-400/20 bg-red-400/10">⚠ IDLE — $3.60/mo waste</span>
-                    : <span className="text-[10px] font-mono px-2 py-0.5 rounded border text-emerald-400 border-emerald-400/20 bg-emerald-400/10">IN USE</span>
-                  }
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
-
-      {inv && tab === 'Load Balancers' && (
-        <motion.div variants={STAGGER} initial="hidden" animate="show" className="space-y-2">
-          {inv.load_balancers.map(lb => (
-            <motion.div key={lb.name} variants={ITEM} className="glass rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">⚖️</span>
-                  <div>
-                    <div className="font-semibold text-bright text-sm">{lb.name}</div>
-                    <div className="text-xs text-muted font-mono">{lb.dns_name}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="hidden sm:block text-right">
-                    <div className="text-xs text-muted">Type</div>
-                    <div className="text-xs font-mono text-bright">{lb.lb_type.toUpperCase()}</div>
-                  </div>
-                  <div className="hidden md:block text-right">
-                    <div className="text-xs text-muted">Scheme</div>
-                    <div className="text-xs font-mono text-bright">{lb.scheme}</div>
-                  </div>
-                  <div className="hidden md:block text-right">
-                    <div className="text-xs text-muted">Target Groups</div>
-                    <div className="text-xs font-mono text-bright">{lb.target_group_count}</div>
-                  </div>
-                  <StateBadge state={lb.state} />
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
-
-      {/* Detail Drawer */}
-      {drawer && (
-        <div className="fixed inset-0 z-50 flex" onClick={() => setDrawer(null)}>
-          <div className="flex-1 bg-black/50 backdrop-blur-sm" />
-          <motion.div
-            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="w-full max-w-lg bg-panel border-l border-border overflow-y-auto h-full"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-bright">Resource Details</h2>
-                <button onClick={() => setDrawer(null)} className="text-muted hover:text-bright text-xl">×</button>
-              </div>
-              <div className="space-y-3">
-                {Object.entries(drawer).map(([k, v]) => (
-                  <div key={k} className="flex gap-3">
-                    <div className="text-xs font-mono text-muted w-40 shrink-0 pt-0.5">{k}</div>
-                    <div className="text-xs text-bright break-all">
-                      {typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        </div>
       )}
     </div>
   )

@@ -125,7 +125,7 @@ async def remediate(finding: Finding, dry_run: Optional[bool] = None) -> Remedia
         ["aws [service] [action] --resource <resource-id>"],
     ))
 
-    if is_dry or settings.mock_mode:
+    if is_dry:
         return RemediationResult(
             finding_id=finding.id,
             dry_run=True,
@@ -136,6 +136,18 @@ async def remediate(finding: Finding, dry_run: Optional[bool] = None) -> Remedia
                 "DRY RUN — No changes applied to your AWS environment. "
                 "Review the diff above, then toggle dry-run off to execute."
             ),
+            commands_executed=cmds,
+            timestamp=datetime.utcnow(),
+        )
+
+    if settings.mock_mode:
+        return RemediationResult(
+            finding_id=finding.id,
+            dry_run=False,
+            before=before,
+            after=after,
+            status="applied",
+            message=f"[MOCK SIMULATION] Successfully applied automated remediation for {finding.title}.",
             commands_executed=cmds,
             timestamp=datetime.utcnow(),
         )
