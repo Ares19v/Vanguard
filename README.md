@@ -21,7 +21,7 @@
 
 ## 🎯 What Is Vanguard?
 
-Vanguard is a **production-grade cloud security platform** that gives you a complete, real-time picture of your AWS attack surface — with the power to fix problems instantly, or preview every change before it happens.
+Vanguard is a **high-performance cloud security platform** that gives you a complete, real-time picture of your AWS attack surface — with the power to fix problems instantly, or preview every change before it happens.
 
 Run it in **Mock Mode** to explore the full UI without any AWS credentials, or flip one env variable to connect to your real account.
 
