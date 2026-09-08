@@ -29,56 +29,41 @@ Run it in **Mock Mode** to explore the full UI without any AWS credentials, or f
 
 ## 🖥️ ASOC Operations Center Showcase
 
-<table width="100%">
-  <tr>
-    <td width="50%" align="center">
-      <img src="assets/Vanguard_1.png" alt="Autonomous Threat Detection Landing Dashboard" width="100%" style="border-radius: 6px;" />
-      <br>
-      <strong>Threat Detection Landing Dashboard</strong>
-      <br>
-      <em>Core platform entry point, monitored AWS cloud services, and live detection triggers.</em>
-    </td>
-    <td width="50%" align="center">
-      <img src="assets/Vanguard_2.png" alt="Secure Posture Baseline View" width="100%" style="border-radius: 6px;" />
-      <br>
-      <strong>Secure Baseline Verification</strong>
-      <br>
-      <em>Zero-vulnerability verification state confirming AWS infrastructure aligns with security baselines.</em>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <img src="assets/Vanguard_3.png" alt="Active Cloud Detections & Remediation Actions" width="100%" style="border-radius: 6px;" />
-      <br>
-      <strong>Active Detections & Remediation</strong>
-      <br>
-      <em>Filtered IAM/S3/EC2 vulnerability cards with AI Diagnosis, Inspect Patch, and 1-click Simulate Fix.</em>
-    </td>
-    <td width="50%" align="center">
-      <img src="assets/Vanguard_4.png" alt="Vanguard AI Security Copilot (Gemini Pro)" width="100%" style="border-radius: 6px;" />
-      <br>
-      <strong>AI Security Copilot (Gemini Pro)</strong>
-      <br>
-      <em>Interactive security architect with vulnerability context sidebar and automated policy prompts.</em>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <img src="assets/Vanguard_5.png" alt="Audit Trail & Historical Security Archives" width="100%" style="border-radius: 6px;" />
-      <br>
-      <strong>Audit Trail & Compliance History</strong>
-      <br>
-      <em>Immutable SQLite audit logs, posture score gauge (60 Moderate), severity breakdown, and CSV export.</em>
-    </td>
-    <td width="50%" align="center">
-      <img src="assets/Vanguard_6.png" alt="Live Scanner Telemetry Stream & Attack Surface" width="100%" style="border-radius: 6px;" />
-      <br>
-      <strong>Console Logs & Attack Surface Catalog</strong>
-      <br>
-      <em>Streaming audit terminal logs paired with categorized attack surface inventory (S3, IAM, EC2).</em>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="assets/Vanguard_1.png" alt="Autonomous Threat Detection Landing Dashboard" width="100%" style="border-radius: 8px; border: 1px solid #30363d;" />
+  <br>
+  <em>Threat Detection Landing Dashboard: Core platform entry point, monitored AWS cloud services, and live detection triggers.</em>
+</p>
+
+<p align="center">
+  <img src="assets/Vanguard_2.png" alt="Secure Posture Baseline View" width="100%" style="border-radius: 8px; border: 1px solid #30363d;" />
+  <br>
+  <em>Secure Baseline Verification: Zero-vulnerability verification state confirming AWS infrastructure aligns with security baselines.</em>
+</p>
+
+<p align="center">
+  <img src="assets/Vanguard_3.png" alt="Active Cloud Detections & Remediation Actions" width="100%" style="border-radius: 8px; border: 1px solid #30363d;" />
+  <br>
+  <em>Active Detections & Remediation: Filtered IAM/S3/EC2 vulnerability cards with AI Diagnosis, Inspect Patch, and 1-click Simulate Fix.</em>
+</p>
+
+<p align="center">
+  <img src="assets/Vanguard_4.png" alt="Vanguard AI Security Copilot (Gemini Pro)" width="100%" style="border-radius: 8px; border: 1px solid #30363d;" />
+  <br>
+  <em>AI Security Copilot (Gemini Pro): Interactive security architect with vulnerability context sidebar and automated policy prompts.</em>
+</p>
+
+<p align="center">
+  <img src="assets/Vanguard_5.png" alt="Audit Trail & Historical Security Archives" width="100%" style="border-radius: 8px; border: 1px solid #30363d;" />
+  <br>
+  <em>Audit Trail & Compliance History: Immutable SQLite audit logs, posture score gauge (60 Moderate), severity breakdown, and CSV export.</em>
+</p>
+
+<p align="center">
+  <img src="assets/Vanguard_6.png" alt="Live Scanner Telemetry Stream & Attack Surface" width="100%" style="border-radius: 8px; border: 1px solid #30363d;" />
+  <br>
+  <em>Console Logs & Attack Surface Catalog: Streaming audit terminal logs paired with categorized attack surface inventory (S3, IAM, EC2).</em>
+</p>
 
 ---
 
